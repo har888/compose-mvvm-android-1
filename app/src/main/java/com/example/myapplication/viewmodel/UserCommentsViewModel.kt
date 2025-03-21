@@ -38,7 +38,7 @@ class UserCommentsViewModel @Inject constructor(
     }
 
     fun handleErrorDismiss() {
-        _uiState.value = UiState.Success(emptyList())
+        _uiState.value = UiState.Empty
     }
 
     fun retryFetchUserComments() {
@@ -55,4 +55,5 @@ sealed class UiState {
     data object Loading : UiState()
     data class Success(val data: List<UserComment>) : UiState()
     data class Error(val errorMessageId: Int) : UiState()
+    data object Empty: UiState()
 }

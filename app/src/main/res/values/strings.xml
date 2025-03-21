@@ -9,4 +9,5 @@
     <!-- Error Dialog -->
     <string name="retry_button">Retry</string>
     <string name="ok_button">Ok</string>
+    <string name="no_comments_loaded">No comments loaded yet.</string>
 </resources>

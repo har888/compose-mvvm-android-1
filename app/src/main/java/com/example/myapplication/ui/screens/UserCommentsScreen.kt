@@ -71,10 +71,26 @@ fun UserCommentsScreen(viewModel: UserCommentsViewModel = hiltViewModel()) {
                             }
                         )
                     }
+                    is UiState.Empty -> {
+                        EmptyMessages()
+                    }
                 }
             }
         }
     )
+}
+
+@Composable
+fun EmptyMessages() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(id = R.string.no_comments_loaded),
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
 }
 
 @Composable
