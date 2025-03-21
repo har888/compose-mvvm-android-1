@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.State
 
 @HiltViewModel
 class UserCommentsViewModel @Inject constructor(
@@ -21,8 +19,8 @@ class UserCommentsViewModel @Inject constructor(
 ): ViewModel() {
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> get() = _uiState
-    private val _selectedImageUris = mutableStateOf<Map<Int, Uri?>>(emptyMap())
-    val selectedImageUris: State<Map<Int, Uri?>> get() = _selectedImageUris
+    private val _selectedImageUris = MutableStateFlow<Map<Int, Uri?>>(emptyMap())
+    val selectedImageUris: StateFlow<Map<Int, Uri?>> get() = _selectedImageUris
 
     fun fetchUserComments() {
         if (_uiState.value is UiState.Loading) {
@@ -49,9 +47,7 @@ class UserCommentsViewModel @Inject constructor(
     }
 
     fun updateSelectedImageUri(commentId: Int, uri: Uri?) {
-        val updatedMap = _selectedImageUris.value.toMutableMap()
-        updatedMap[commentId] = uri
-        _selectedImageUris.value = updatedMap
+        _selectedImageUris.value = _selectedImageUris.value + (commentId to uri)
     }
 }
 

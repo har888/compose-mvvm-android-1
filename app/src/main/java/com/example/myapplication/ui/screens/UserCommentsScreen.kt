@@ -95,7 +95,8 @@ fun UserComments(userComments: List<UserComment>) {
 
 @Composable
 fun UserComment(comment: UserComment, viewModel: UserCommentsViewModel = hiltViewModel()) {
-    val selectedImageUri = viewModel.selectedImageUris.value[comment.id]
+    val selectedImageUri by viewModel.selectedImageUris.collectAsStateWithLifecycle()
+    val currentImageUri = selectedImageUri[comment.id] ?: R.drawable.profile_user_default
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let{
             viewModel.updateSelectedImageUri(comment.id, uri)
@@ -125,7 +126,7 @@ fun UserComment(comment: UserComment, viewModel: UserCommentsViewModel = hiltVie
             Image(
                 painter = rememberAsyncImagePainter(
                     ImageRequest.Builder(LocalContext.current)
-                        .data(data = selectedImageUri ?: R.drawable.profile_user_default)
+                        .data(data = currentImageUri)
                         .apply(block = fun ImageRequest.Builder.() {
                             transformations(CircleCropTransformation())
                         }).build()
