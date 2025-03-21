@@ -13,8 +13,9 @@ import org.mockito.Mockito
 import org.mockito.kotlin.whenever
 import org.mockito.kotlin.doThrow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.setMain
 
@@ -25,7 +26,7 @@ class UserCommentsViewModelTest {
 
     @Before
     fun setup() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(StandardTestDispatcher())
 
         mockRepository = Mockito.mock(IUserCommentsRepository::class.java)
         viewModel = UserCommentsViewModel(mockRepository)
@@ -55,6 +56,10 @@ class UserCommentsViewModelTest {
                         assert(state.data == mockComments)
                     }
                     is UiState.Error -> {
+                        // This block should not be reached
+                        assert(false)
+                    }
+                    is UiState.Empty -> {
                         // This block should not be reached
                         assert(false)
                     }
@@ -94,41 +99,90 @@ class UserCommentsViewModelTest {
                         // Assert that the error state is emitted with the expected error message
                         assert(state.errorMessageId == R.string.post_comments_failure_error)
                     }
+                    is UiState.Empty -> {
+                        // This block should not be reached
+                        assert(false)
+                    }
                 }
             }
         }
 
-        // Wait for the coroutine to complete
+        // Wait for the coroutine to finish its work
         advanceUntilIdle()
 
         // Ensure the job is completed
         job.cancel()
     }
 
-
-
     @Test
-    fun `test handleErrorDismiss updates UI state to Success with empty list`() = runTest {
-        // Arrange: Simulate an error state first
+    fun `test fetchUserComments empty list`() = runTest {
+        // Arrange: Simulate an empty list from the repository
+        val emptyComments = emptyList<UserComment>()
+        whenever(mockRepository.getUserComments()).thenReturn(flowOf(emptyComments))
+
+        // Act
         viewModel.fetchUserComments()
 
-        // Initially, we expect the state to be in the Error state
+        // Assert: Collect and check the emitted states from uiState
         val job = launch {
             viewModel.uiState.collect { state ->
-                if (state is UiState.Error) {
-                    // Act: Simulate dismissing the error
-                    viewModel.handleErrorDismiss()
-
-                    // Assert: Ensure the state transitions to Success with an empty list
-                    viewModel.uiState.collect { updatedState ->
-                        assert(updatedState is UiState.Success)
-                        assert((updatedState as UiState.Success).data.isEmpty())
+                when (state) {
+                    is UiState.Loading -> {
+                        // Assert loading state
+                        assert(state is UiState.Loading)
+                    }
+                    is UiState.Success -> {
+                        // Assert success state with an empty list
+                        assert(state.data.isEmpty())
+                    }
+                    is UiState.Error -> {
+                        // This block should not be reached
+                        assert(false)
+                    }
+                    is UiState.Empty -> {
+                        // This block should not be reached
+                        assert(false)
                     }
                 }
             }
         }
 
-        // Wait for the coroutine to finish
+        // Wait for the coroutine to finish its work
+        advanceUntilIdle()
+
+        // Ensure the job is completed
+        job.cancel()
+    }
+
+    @Test
+    fun `test handleErrorDismiss updates UI state to Empty`() = runTest {
+        // Arrange: Simulate an error state first by making the repository throw an error
+        val errorMessage = "Network Error"
+        whenever(mockRepository.getUserComments()).doThrow(RuntimeException(errorMessage))
+
+        // Act: Fetch user comments which will result in an error state
+        viewModel.fetchUserComments()
+
+        // Collect the first emission of the UI state
+        val job = launch {
+            // Collect only the first emission, which should be the Error state
+            viewModel.uiState.first { state ->
+                state is UiState.Error
+            }
+
+            // Act: Simulate dismissing the error
+            viewModel.handleErrorDismiss()
+
+            // Now collect the next state (Empty)
+            val updatedState = viewModel.uiState.first { state ->
+                state is UiState.Empty
+            }
+
+            // Assert: Ensure the state transitions to Empty
+            assert(updatedState is UiState.Empty)
+        }
+
+        // Wait for the coroutine to finish its work
         advanceUntilIdle()
 
         // Ensure the job is completed
