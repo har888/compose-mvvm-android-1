@@ -1,5 +1,6 @@
 package com.example.myapplication.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.R
@@ -11,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
 
 @HiltViewModel
 class UserCommentsViewModel @Inject constructor(
@@ -18,22 +21,37 @@ class UserCommentsViewModel @Inject constructor(
 ): ViewModel() {
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> get() = _uiState
+    private val _selectedImageUris = mutableStateOf<Map<Int, Uri?>>(emptyMap())
+    val selectedImageUris: State<Map<Int, Uri?>> get() = _selectedImageUris
 
     fun fetchUserComments() {
-        viewModelScope.launch {
-            _uiState.value = UiState.Loading
-            try {
-                userCommentsRepository.getUserComments().collectLatest { comments ->
-                    _uiState.value = UiState.Success(comments)
+        if (_uiState.value is UiState.Loading) {
+            viewModelScope.launch {
+                _uiState.value = UiState.Loading
+                try {
+                    userCommentsRepository.getUserComments().collectLatest { comments ->
+                        _uiState.value = UiState.Success(comments)
+                    }
+                } catch (e: Exception) {
+                    _uiState.value = UiState.Error(R.string.post_comments_failure_error)
                 }
-            } catch (e: Exception) {
-                _uiState.value = UiState.Error(R.string.post_comments_failure_error)
             }
         }
     }
 
     fun handleErrorDismiss() {
         _uiState.value = UiState.Success(emptyList())
+    }
+
+    fun retryFetchUserComments() {
+        _uiState.value = UiState.Loading
+        fetchUserComments()
+    }
+
+    fun updateSelectedImageUri(commentId: Int, uri: Uri?) {
+        val updatedMap = _selectedImageUris.value.toMutableMap()
+        updatedMap[commentId] = uri
+        _selectedImageUris.value = updatedMap
     }
 }
 

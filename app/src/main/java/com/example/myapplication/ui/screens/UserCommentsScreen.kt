@@ -23,12 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,8 +31,8 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.transform.CircleCropTransformation
@@ -60,29 +55,22 @@ fun UserCommentsScreen(viewModel: UserCommentsViewModel = hiltViewModel()) {
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(paddingValues)
             ) {
-                val uiState by viewModel.uiState.collectAsState()
-                var showErrorDialog by remember { mutableStateOf(false) }
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                 when (uiState) {
                     is UiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     is UiState.Success -> UserComments((uiState as UiState.Success).data)
                     is UiState.Error -> {
-                        showErrorDialog = true
+                        val errorMessageId = (uiState as UiState.Error).errorMessageId
+                        ErrorDialog(
+                            message = stringResource(id = errorMessageId),
+                            onDismiss = {
+                                viewModel.handleErrorDismiss()
+                            },
+                            onRetry = {
+                                viewModel.retryFetchUserComments()
+                            }
+                        )
                     }
-                }
-
-                if(showErrorDialog) {
-                    val errorMessageId = (uiState as UiState.Error).errorMessageId
-                    ErrorDialog(
-                        message = stringResource(id = errorMessageId),
-                        onDismiss = {
-                            showErrorDialog = false
-                            viewModel.handleErrorDismiss()
-                        },
-                        onRetry = {
-                            showErrorDialog = false
-                            viewModel.fetchUserComments()
-                        }
-                    )
                 }
             }
         }
@@ -106,10 +94,12 @@ fun UserComments(userComments: List<UserComment>) {
 }
 
 @Composable
-fun UserComment(comment: UserComment) {
-    var selectedImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+fun UserComment(comment: UserComment, viewModel: UserCommentsViewModel = hiltViewModel()) {
+    val selectedImageUri = viewModel.selectedImageUris.value[comment.id]
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        selectedImageUri = uri
+        uri?.let{
+            viewModel.updateSelectedImageUri(comment.id, uri)
+        }
     }
 
     Card(
@@ -142,7 +132,7 @@ fun UserComment(comment: UserComment) {
                 ),
                 contentDescription = "User Image",
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(dimensionResource(id = R.dimen.dimen_100dp))
                     .clickable {
                         launcher.launch("image/*")
                     }
