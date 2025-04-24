@@ -103,7 +103,7 @@ fun UserComments(userComments: List<UserComment>) {
                 vertical = dimensionResource(id = R.dimen.dimen_15dp),
             )
     ) {
-        items(userComments) { comment ->
+        items(userComments, key = { it.id }) { comment ->
             UserComment(comment)
         }
     }
