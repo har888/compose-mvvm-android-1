@@ -44,9 +44,14 @@ import com.example.myapplication.viewmodel.UiState
 import com.example.myapplication.viewmodel.UserCommentsViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun UserCommentsScreen(viewModel: UserCommentsViewModel = hiltViewModel()) {
+    LaunchedEffect(Unit){
+        viewModel.fetchUserComments()
+    }
+
     Scaffold(
         content = { paddingValues ->
             Box(
